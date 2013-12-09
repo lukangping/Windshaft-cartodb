@@ -10,7 +10,7 @@ suite('signed_maps', function() {
     // configure redis pool instance to use in tests
     var redis_opts = global.environment.redis;
     
-    test.skip('can sign map with open auth', function(done) {
+    test('can sign map with open and token-based auth', function(done) {
       var smap = new SignedMaps(redis_opts);
       assert.ok(smap);
       var sig = 'sig1';
@@ -21,7 +21,8 @@ suite('signed_maps', function() {
         layergroup_id:map,
         auth: {}
       };
-      var crt1_id, crt2_id;
+      var crt1_id; // by token
+      var crt2_id; // open
       Step(
         function() {
           smap.isAuthorized(sig,map,tok,this);
@@ -37,6 +38,7 @@ suite('signed_maps', function() {
           if ( err ) throw err;
           assert.ok(id, "undefined signature id");
           crt1_id = id; // keep note of it
+//console.log("Certificate 1 is " + crt1_id);
           smap.isAuthorized(sig,map,'',this);
         },
         function checkAuthFailure2(err, authorized) {
@@ -55,31 +57,22 @@ suite('signed_maps', function() {
           if ( err ) throw err;
           assert.ok(id, "undefined signature id");
           crt2_id = id; // keep note of it
+//console.log("Certificate 2 is " + crt2_id);
           smap.isAuthorized(sig,map,'arbitrary',this);
         },
-        function checkAuthSuccess2(err, authorized) {
+        function checkAuthSuccess2_delCert2(err, authorized) {
           if ( err ) throw err;
           assert.ok(authorized, "unauthorized :(");
-        },
-        function deleteCert1(err) {
-          if ( ! crt1_id ) {
-            if ( err ) throw err;
-            return null;
-          }
           var next = this;
-          smap.delSignature(crt1_id, function(e) {
-            next(err ? err : e);
+          smap.delCertificate(sig, crt2_id, function(e) {
+            if (e) next(e);
+            else smap.isAuthorized(sig,map,'arbitrary',next);
           });
         },
-        function deleteCert2(err) {
-          if ( ! crt2_id ) {
-            if ( err ) throw err;
-            return null;
-          }
-          var next = this;
-          smap.delSignature(crt2_id, function(e) {
-            next(err ? err : e);
-          });
+        function checkAuthFailure3_delCert2(err, authorized) {
+          if ( err ) throw err;
+          assert.ok(!authorized, "unexpectedly authorized");
+          smap.delCertificate(sig, crt1_id, this);
         },
         function finish(err) {
           done(err);
