@@ -1,5 +1,6 @@
 var assert = require('assert')
   //, _ = require('underscore')
+  , RedisPool = require('redis-mpool')
   , SignedMaps = require('../../../lib/cartodb/signed_maps.js')
   , test_helper = require('../../support/test_helper')
   , Step = require('step')
@@ -8,10 +9,10 @@ var assert = require('assert')
 suite('signed_maps', function() {
 
     // configure redis pool instance to use in tests
-    var redis_opts = global.environment.redis;
+    var redis_pool = RedisPool(global.environment.redis);
     
     test('can sign map with open and token-based auth', function(done) {
-      var smap = new SignedMaps(redis_opts);
+      var smap = new SignedMaps(redis_pool);
       assert.ok(smap);
       var sig = 'sig1';
       var map = 'map1';
