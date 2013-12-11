@@ -114,5 +114,40 @@ suite('template_maps', function() {
       }
     );
   });
+
+  test('add multiple templates, list them', function(done) {
+    var tmap = new TemplateMaps(redis_pool, signed_maps);
+    assert.ok(tmap);
+    var expected_failure = false;
+    var tpl1 = { version:'0.0.1', name: 'first', auth: {}, layergroup: {} };
+    var tpl1_id;
+    var tpl2 = { version:'0.0.1', name: 'second', auth: {}, layergroup: {} };
+    var tpl2_id;
+    Step(
+      function addTemplate1() {
+        tmap.addTemplate('me', tpl1, this);
+      },
+      function addTemplate2(err, id) {
+        if ( err ) throw err;
+        tpl1_id = id;
+        tmap.addTemplate('me', tpl2, this);
+      },
+      function listTemplates(err, id) {
+        if ( err ) throw err;
+        tpl2_id = id;
+        tmap.listTemplates('me', this);
+      },
+      function checkTemplates(err, ids) {
+        if ( err ) throw err;
+        assert.equal(ids.length, 2);
+        assert.ok(ids.indexOf(tpl1_id) != -1, ids.join(','));
+        assert.ok(ids.indexOf(tpl2_id) != -1, ids.join(','));
+        return null;
+      },
+      function finish(err) {
+        done(err);
+      }
+    );
+  });
     
 });
