@@ -79,9 +79,10 @@ suite('template_maps', function() {
     testNext();
   });
 
-  test('add, override, get and delete a valid template', function(done) {
+  test('add, get and delete a valid template', function(done) {
     var tmap = new TemplateMaps(redis_pool, signed_maps);
     assert.ok(tmap);
+    var expected_failure = false;
     var tpl_id;
     var tpl = { version:'0.0.1',
       name: 'first', auth: {}, layergroup: {} };
@@ -89,10 +90,18 @@ suite('template_maps', function() {
       function() {
         tmap.addTemplate('me', tpl, this);
       },
-      function getTemplate(err, id) {
+      function addOmonimousTemplate(err, id) {
         if ( err ) throw err;
         tpl_id = id;
         assert.equal(tpl_id, 'first');
+        expected_failure = true;
+        // should fail, as it already exists
+        tmap.addTemplate('me', tpl, this);
+      },
+      function getTemplate(err) {
+        if ( ! expected_failure && err ) throw err;
+        assert.ok(err);
+        assert.ok(err.message.match(/already exists/i), err);
         tmap.getTemplate('me', tpl_id, this);
       },
       function delTemplate(err, got_tpl) {
